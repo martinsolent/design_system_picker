@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design System Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Open+Sans:wght@400;700&family=Red+Hat+Text:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: system list on the left, one live sample screen on the right, tokens and prompt beneath it. */
+:root{
+  --bg:#f6f8fa; --panel:#ffffff; --ink:#1f2328; --muted:#59636e; --line:#d1d9e0;
+  --accent:#0969da; --accent-ink:#ffffff; --good:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+  --font-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1117; --panel:#151b23; --ink:#f0f6fc; --muted:#9198a1; --line:#3d444d;
+    --accent:#4493f8; --accent-ink:#0d1117; --good:#3fb950; --warn:#d29922; --bad:#f85149;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1117; --panel:#151b23; --ink:#f0f6fc; --muted:#9198a1; --line:#3d444d;
+  --accent:#4493f8; --accent-ink:#0d1117; --good:#3fb950; --warn:#d29922; --bad:#f85149;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 40px;display:grid;gap:20px}
+header h1{font-size:1.75rem;line-height:1.2;margin:0 0 6px;font-weight:700;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:65ch}
+h2{font-size:1rem;margin:0;font-weight:600}
+.mono{font-family:var(--font-mono);font-size:.8rem}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:grid;gap:20px;min-width:0}
+@media (min-width:920px){.layout{grid-template-columns:290px minmax(0,1fr);align-items:start}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.stack{display:grid;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{justify-content:space-between}
+
+/* chrome buttons */
+.chip,.seg button,.btn{font:inherit;font-size:.875rem;cursor:pointer;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.chip[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg{display:inline-flex}
+.seg button{border-radius:0;margin-left:-1px}
+.seg button:first-child{border-radius:8px 0 0 8px;margin-left:0}
+.seg button:last-child{border-radius:0 8px 8px 0}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.btn{border-radius:8px;padding:8px 14px;font-weight:600}
+.btn.go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* system list */
+.list{display:grid;gap:8px}
+.sys{font:inherit;text-align:left;cursor:pointer;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:3px}
+.sys[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.sys b{font-weight:600}
+.sys small{color:var(--muted)}
+.dots{display:flex;gap:4px}
+.dots i{width:16px;height:16px;border-radius:50%;border:1px solid var(--line)}
+.kind{font-size:.75rem;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);white-space:nowrap}
+.list{max-height:72vh;overflow-y:auto;padding:2px 4px 2px 2px}
+@media (max-width:919px){.list{max-height:300px}}
+.search{font:inherit;width:100%;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+
+/* detail */
+.title h2{font-size:1.35rem}
+.title p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.facts div{border-left:3px solid var(--line);padding-left:10px}
+.facts dt{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.facts dd{margin:0;font-size:.9rem}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.stage{background:repeating-linear-gradient(45deg,transparent 0 10px,color-mix(in srgb,var(--line) 35%,transparent) 10px 11px);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;justify-content:center}
+#frame{width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--line);container-type:inline-size;transition:max-width .2s}
+#frame.phone{max-width:390px}
+@media (prefers-reduced-motion:reduce){#frame{transition:none}}
+.two{display:grid;gap:20px;min-width:0}
+@media (min-width:1100px){.two{grid-template-columns:minmax(0,5fr) minmax(0,6fr);align-items:start}}
+
+.tokens{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tok{font:inherit;cursor:pointer;color:var(--ink);background:none;border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;gap:8px;align-items:center;text-align:left;min-width:0}
+.tok i{flex:none;width:30px;height:30px;border-radius:6px;border:1px solid var(--line)}
+.tok span{display:grid;min-width:0}
+.tok small{color:var(--muted);font-size:.75rem}
+.cr{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.cr li{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:.9rem;border-top:1px solid var(--line);padding-top:6px}
+.cr .n{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:1px 9px;border:1px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--good)} .pill.mid{color:var(--warn)} .pill.no{color:var(--bad)}
+label.l{font-size:.875rem;font-weight:600}
+textarea{font:inherit;width:100%;min-height:76px;resize:vertical;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+pre{margin:0;font-family:var(--font-mono);font-size:.78rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;max-height:380px;overflow:auto}
+#status{font-size:.85rem;color:var(--good);min-height:1.3em}
+.know h2{font-size:1.15rem}
+.know dl{margin:0;display:grid;gap:14px 28px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.know dt{font-weight:600}
+.know dd{margin:2px 0 0;color:var(--muted);font-size:.92rem}
+
+/* ---------- sample screen, driven only by --p-* variables ---------- */
+.pv{font-family:var(--p-font);background:var(--p-bg);color:var(--p-text);font-size:16px;line-height:1.5}
+.pv *{font-family:inherit}
+.pv :focus-visible{outline:var(--p-focus-w) solid var(--p-focus);outline-offset:var(--p-focus-off)}
+.pv-bar{background:var(--p-bar);color:var(--p-bar-text);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid var(--p-border)}
+.pv-bar b{font-weight:var(--p-h-weight)}
+.pv-bar span{font-size:.875rem;opacity:.9}
+.pv-body{padding:16px;display:grid;gap:18px}
+.pv-cols{display:grid;gap:22px}
+@container (min-width:680px){.pv-cols{grid-template-columns:1fr 1fr}.pv-body{padding:24px}}
+.pv-col{display:grid;gap:14px;align-content:start;min-width:0}
+.pv h3{margin:0;font-size:1.4rem;line-height:1.25;font-weight:var(--p-h-weight)}
+.pv p{margin:0}
+.pv-muted{color:var(--p-muted);font-size:.9rem}
+.pv-tabs{display:flex;gap:2px;border-bottom:1px solid var(--p-border);width:100%}
+.pv-tab{font-size:1rem;background:none;border:0;border-bottom:3px solid transparent;padding:9px 12px;color:var(--p-muted);cursor:pointer;margin-bottom:-1px}
+.pv-tab[aria-selected="true"]{color:var(--p-text);border-bottom-color:var(--p-accent);font-weight:600}
+[data-tabs="segmented"] .pv-tabs{border:0;background:var(--p-surface);padding:4px;border-radius:var(--p-r-card);width:fit-content}
+[data-tabs="segmented"] .pv-tab{border:0;margin:0;padding:5px 12px;border-radius:var(--p-r-input);font-size:.9rem}
+[data-tabs="segmented"] .pv-tab[aria-selected="true"]{background:var(--p-bg);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.pv-alert{padding:11px 14px;border-radius:var(--p-r-input);font-size:.95rem}
+[data-alert="stripe"] .pv-alert{border-left:5px solid var(--p-ok);background:color-mix(in srgb,var(--p-ok) 10%,var(--p-bg));border-radius:0}
+[data-alert="tint"] .pv-alert{border:1px solid color-mix(in srgb,var(--p-ok) 45%,var(--p-bg));background:color-mix(in srgb,var(--p-ok) 12%,var(--p-bg))}
+[data-alert="outline"] .pv-alert{border:1px solid var(--p-border);border-radius:var(--p-r-card)}
+.pv-field{display:grid;gap:4px}
+.pv-field label,.pv-legend{font-weight:600;font-size:.95rem}
+.pv-input{font-size:1rem;color:var(--p-text);background:var(--p-bg);border:1px solid var(--p-input);border-radius:var(--p-r-input);padding:0 12px;min-height:40px;width:100%}
+[data-input="heavy"] .pv-input{border:2px solid var(--p-text)}
+[data-input="underline"] .pv-input{background:var(--p-surface);border-color:transparent;border-bottom-color:var(--p-input)}
+[data-input="fluent"] .pv-input{border-bottom-color:var(--p-muted)}
+[data-input="filled"] .pv-input{background:var(--p-surface);border-color:transparent}
+[data-input="line"] .pv-input{border-color:transparent;border-bottom-color:var(--p-input);border-radius:0;padding-left:0}
+.pv-field.err .pv-input{border-color:var(--p-bad)}
+[data-input="heavy"] .pv-field.err{border-left:4px solid var(--p-bad);padding-left:12px}
+.pv-err{color:var(--p-bad);font-size:.9rem;font-weight:600}
+.pv-opts{display:grid;gap:8px;border:0;padding:0;margin:0}
+.pv-opt{display:flex;gap:10px;align-items:center}
+.pv-opt input[type=checkbox]:not(.pv-switch),.pv-opt input[type=radio]{width:20px;height:20px;margin:0;accent-color:var(--p-accent)}
+.pv-switch{appearance:none;-webkit-appearance:none;margin:0;width:42px;height:24px;border-radius:999px;background:var(--p-input);position:relative;cursor:pointer;flex:none}
+.pv-switch::before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--p-bg);transition:transform .15s}
+.pv-switch:checked{background:var(--p-accent)}
+.pv-switch:checked::before{transform:translateX(18px)}
+@media (prefers-reduced-motion:reduce){.pv-switch::before{transition:none}}
+.pv-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding-bottom:4px}
+.pv-btn{font-size:1rem;text-transform:var(--p-btn-case);font-weight:var(--p-btn-w);min-height:var(--p-btn-h);padding:var(--p-btn-pad);border-radius:var(--p-r-btn);border:1px solid transparent;cursor:pointer;box-shadow:var(--p-btn-shadow);text-align:left}
+.pv-btn.primary{background:var(--p-primary);color:var(--p-on)}
+.pv-btn.primary:hover{background:var(--p-hover)}
+.pv-btn.secondary{background:var(--p-sec-bg);border-color:var(--p-sec-line);color:var(--p-sec-text);box-shadow:none}
+.pv-link{font-size:1rem;background:none;border:0;padding:0;color:var(--p-accent);text-decoration:underline;cursor:pointer}
+.pv-card{background:var(--p-card-bg);border:1px solid var(--p-card-line);border-radius:var(--p-r-card);box-shadow:var(--p-card-shadow);padding:14px;display:grid;gap:8px}
+.pv-card-top{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.pv-card b{font-weight:600}
+.pv-badge{font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:var(--p-r-badge);background:color-mix(in srgb,var(--p-accent) 14%,var(--p-bg));color:var(--p-text);white-space:nowrap}
+.pv-bar2{height:6px;border-radius:var(--p-r-badge);background:var(--p-border);overflow:hidden}
+.pv-bar2 i{display:block;height:100%;background:var(--p-accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Design System Picker</h1>
+    <p>Browse <span id="count">over 100</span> open source design systems. <span id="pcount">40</span> have a live preview on the same sample screen. Pick one, then copy a prompt that tells your AI tool to build your prototype with it.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="stack" aria-label="Design systems">
+      <div class="stack" style="gap:4px"><label class="l" for="q">Find a design system</label>
+      <input class="search" id="q" type="search" placeholder="Name or licence" autocomplete="off"></div>
+      <div class="row" id="filters" role="group" aria-label="Filter the list"></div>
+      <p class="note" id="shown" role="status"></p>
+      <div class="list" id="list"></div>
+    </aside>
+
+    <main class="stack">
+      <section class="panel stack title">
+        <div class="row spread">
+          <h2 id="name"></h2>
+          <div class="row"><a id="site" href="#" target="_blank" rel="noopener">Official docs</a><a id="repo" href="#" target="_blank" rel="noopener">Source code</a></div>
+        </div>
+        <p id="about"></p>
+        <dl class="facts" id="facts"></dl>
+        <p class="note" id="liteNote" hidden>Starter preview: it uses this system's main colour, font and corner shapes. The greys and spacing are generic.</p>
+      </section>
+
+      <section class="panel stack">
+        <div class="row spread">
+          <h2>Sample screen</h2>
+          <div class="row">
+            <div class="seg" role="group" aria-label="Preview theme"><button id="mLight" aria-pressed="true">Light</button><button id="mDark" aria-pressed="false">Dark</button></div>
+            <div class="seg" role="group" aria-label="Preview width"><button id="wPhone" aria-pressed="false">Phone</button><button id="wWide" aria-pressed="true">Wide</button></div>
+          </div>
+        </div>
+        <p class="note" id="darkNote" hidden></p>
+        <p class="note" id="wireNote" hidden>No preview for this system yet. Its colours and shapes are not stored in this tool, so the sample is a plain wireframe. Open the official docs to see the real thing.</p>
+        <div class="stage">
+          <div id="frame"><div class="pv">
+            <div class="pv-bar"><b>Study planner</b><span>Sam Okafor</span></div>
+            <div class="pv-body">
+              <div class="pv-tabs" role="tablist" aria-label="Views">
+                <button class="pv-tab" role="tab" aria-selected="true" data-tab="today">Today</button>
+                <button class="pv-tab" role="tab" aria-selected="false" data-tab="week">Week</button>
+                <button class="pv-tab" role="tab" aria-selected="false" data-tab="modules">Modules</button>
+              </div>
+              <div class="pv-cols">
+                <div class="pv-col">
+                  <h3>Add a task</h3>
+                  <div class="pv-alert" role="status"><b>Task saved.</b> Read chapter 4 is marked as done.</div>
+                  <div class="pv-field"><label for="pvName">Task name</label><input class="pv-input" id="pvName" value="Usability test write-up"></div>
+                  <div class="pv-field"><label for="pvMod">Module</label><select class="pv-input" id="pvMod"><option>UX Design</option><option>Systems Analysis</option><option>Research Methods</option></select></div>
+                  <div class="pv-field err"><label for="pvDue">Due date</label><span class="pv-err" id="pvDueErr">Enter a date in the future</span><input class="pv-input" id="pvDue" value="12 October 2026" aria-describedby="pvDueErr" aria-invalid="true"></div>
+                  <fieldset class="pv-opts"><legend class="pv-legend">Priority</legend>
+                    <label class="pv-opt"><input type="radio" name="pvPri" id="pvPri1"> Normal</label>
+                    <label class="pv-opt"><input type="radio" name="pvPri" id="pvPri2" checked> High</label>
+                  </fieldset>
+                  <div class="pv-opts">
+                    <label class="pv-opt"><input type="checkbox" id="pvRemind" checked> Remind me the day before</label>
+                    <label class="pv-opt"><input type="checkbox" role="switch" class="pv-switch" id="pvCal" checked> Show on calendar</label>
+                  </div>
+                  <div class="pv-actions"><button class="pv-btn primary" id="pvSave">Save task</button><button class="pv-btn secondary" id="pvCancel">Cancel</button><button class="pv-link" id="pvDelete">Delete</button></div>
+                </div>
+                <div class="pv-col">
+                  <h3 id="pvListTitle">Today</h3>
+                  <div class="pv-col" id="pvList"></div>
+                  <p class="pv-muted">Tasks sync when you are back online.</p>
+                </div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+      </section>
+
+      <div class="two">
+        <section class="panel stack" id="tokPanel">
+          <div class="row spread"><h2>Design tokens</h2><span class="note">Tap a colour to copy it</span></div>
+          <div class="tokens" id="tokens"></div>
+          <h2>Contrast check</h2>
+          <ul class="cr" id="contrast"></ul>
+          <p class="note">WCAG AA needs 4.5:1 for normal text and 3:1 for large text. Ratios are calculated from the colours above.</p>
+        </section>
+
+        <section class="panel stack">
+          <h2>Build with it</h2>
+          <div class="stack" style="gap:4px"><label class="l" for="idea">What are you building?</label>
+          <textarea id="idea">A habit tracker with a home screen, an add-habit form and a weekly progress view</textarea></div>
+          <div class="row spread">
+            <div class="seg" role="group" aria-label="Show"><button id="oPrompt" aria-pressed="true">Prompt</button><button id="oCss" aria-pressed="false">CSS variables</button></div>
+            <button class="btn go" id="copy">Copy</button>
+          </div>
+          <pre id="out" tabindex="0"></pre>
+          <div id="status" role="status" aria-live="polite"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <section class="panel stack know" aria-labelledby="knowTitle">
+    <h2 id="knowTitle">Things to know before you use a system</h2>
+    <dl>
+      <div><dt>Previews are approximations</dt><dd>Each preview is drawn from a system's colours, type and shapes. It does not load the real component library, so the real thing will differ in detail.</dd></div>
+      <div><dt>Token values are a starting point</dt><dd>Colours, fonts and corner sizes were written from memory, not copied from each project. Confirm them in the official docs before you rely on them.</dd></div>
+      <div><dt>Starter previews are simpler</dt><dd>Where a system is marked as a starter preview, only its main colour, font and corner shapes are specific to it. The greys and spacing are generic.</dd></div>
+      <div><dt>Some systems have no preview</dt><dd>Systems without stored colours show a plain wireframe. You still get the licence, the links and a prompt to copy.</dd></div>
+      <div><dt>Licences were checked once</dt><dd>Each licence was read from the project's own repository on 17 November 2026. Licences can change, so read the current one before you publish or sell anything built with a system.</dd></div>
+      <div><dt>Some licences have sharing conditions</dt><dd>MIT, Apache, BSD and CC0 let you use the code freely. GPL, LGPL, EUPL and MPL ask you to share your changes under the same terms in some situations.</dd></div>
+      <div><dt>A few licences rest on weaker evidence</dt><dd>Where an entry says "declared in package.json", the project has no separate licence file. Treat those with more care.</dd></div>
+      <div><dt>Not every project is still maintained</dt><dd>Maintenance was not checked. Open the source code link and look for recent activity before you commit to a system.</dd></div>
+      <div><dt>A licence covers the code, not the brand</dt><dd>Names, logos and some fonts stay protected. Never present a prototype in a government, health service or company style as if it were the real service.</dd></div>
+    </dl>
+  </section>
+</div>
+
+<script>
+const SYS='system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+const KIND={html:'Plain HTML and CSS',wc:'Web components',react:'React'};
+const S=[
+{id:'material',name:'Material Design 3',org:'Google',lic:'Apache 2.0',kind:'wc',site:'https://m3.material.io',repo:'https://github.com/material-components/material-web',
+ font:'Roboto,'+SYS,fontName:'Roboto',r:[999,4,12],ok:'#386a20',bad:'#b3261e',btn:{h:40,pad:'0 24px',w:500},
+ about:'Google\'s system for Android and the web. Soft tinted surfaces, pill buttons and colour roles that adapt to a brand colour.',
+ best:'Mobile apps and anything that should feel like Android',lib:'Material Web components (in maintenance mode)',
+ v:{input:'outline',alert:'tint',tabs:'underline',card:'fill',sec:'accent'},
+ light:{bg:'#fef7ff',surface:'#f3edf7',text:'#1d1b20',muted:'#49454f',border:'#cac4d0',input:'#79747e',primary:'#6750a4',on:'#ffffff',hover:'#5b4696',accent:'#6750a4',bar:'#f3edf7',barText:'#1d1b20'},
+ dark:{bg:'#141218',surface:'#211f26',text:'#e6e0e9',muted:'#cac4d0',border:'#49454f',input:'#938f99',primary:'#d0bcff',on:'#381e72',hover:'#c4adfa',accent:'#d0bcff',bar:'#211f26',barText:'#e6e0e9'}},
+{id:'carbon',name:'Carbon',org:'IBM',lic:'Apache 2.0',kind:'wc',site:'https://carbondesignsystem.com',repo:'https://github.com/carbon-design-system/carbon',
+ font:'"IBM Plex Sans",'+SYS,fontName:'IBM Plex Sans',r:[0,0,0],ok:'#24a148',bad:'#da1e28',btn:{h:48,pad:'0 56px 0 16px',w:400},
+ about:'IBM\'s system for complex products. Square corners, a strict grid, layered greys and one strong blue.',
+ best:'Dashboards, data-heavy and enterprise tools',lib:'Carbon Web Components',
+ v:{input:'underline',alert:'stripe',tabs:'underline',card:'fill',sec:'accent'},
+ light:{bg:'#ffffff',surface:'#f4f4f4',text:'#161616',muted:'#525252',border:'#e0e0e0',input:'#8d8d8d',primary:'#0f62fe',on:'#ffffff',hover:'#0050e6',accent:'#0f62fe',bar:'#161616',barText:'#ffffff'},
+ dark:{bg:'#161616',surface:'#262626',text:'#f4f4f4',muted:'#c6c6c6',border:'#393939',input:'#6f6f6f',primary:'#0f62fe',on:'#ffffff',hover:'#0050e6',accent:'#78a9ff',bar:'#161616',barText:'#f4f4f4'}},
+{id:'fluent',name:'Fluent 2',org:'Microsoft',lic:'MIT',kind:'wc',site:'https://fluent2.microsoft.design',repo:'https://github.com/microsoft/fluentui',
+ font:'"Segoe UI",'+SYS,fontName:'Segoe UI (system font)',r:[4,4,4],ok:'#107c10',bad:'#c50f1f',btn:{h:32,pad:'0 12px',w:600},
+ about:'The look of Microsoft 365 and Teams. Compact controls, quiet greys and light shadows for depth.',
+ best:'Productivity and workplace tools',lib:'Fluent UI Web Components',
+ v:{input:'fluent',alert:'tint',tabs:'underline',card:'shadow',sec:'outline'},
+ light:{bg:'#ffffff',surface:'#f5f5f5',text:'#242424',muted:'#616161',border:'#e0e0e0',input:'#d1d1d1',primary:'#0f6cbd',on:'#ffffff',hover:'#115ea3',accent:'#0f6cbd',bar:'#ffffff',barText:'#242424'},
+ dark:{bg:'#292929',surface:'#1f1f1f',text:'#ffffff',muted:'#adadad',border:'#525252',input:'#666666',primary:'#115ea3',on:'#ffffff',hover:'#0f6cbd',accent:'#479ef5',bar:'#1f1f1f',barText:'#ffffff'}},
+{id:'primer',name:'Primer',org:'GitHub',lic:'MIT',kind:'html',site:'https://primer.style',repo:'https://github.com/primer',
+ font:SYS,fontName:'System font stack',r:[6,6,6],ok:'#1a7f37',bad:'#d1242f',btn:{h:32,pad:'0 12px',w:500},
+ about:'The system behind GitHub. Dense, calm and built for developer tools, with a green primary action and blue links.',
+ best:'Developer tools and content-heavy apps',lib:'Primer CSS',
+ v:{input:'outline',alert:'tint',tabs:'underline',card:'border',sec:'grey'},
+ light:{bg:'#ffffff',surface:'#f6f8fa',text:'#1f2328',muted:'#59636e',border:'#d1d9e0',input:'#d1d9e0',primary:'#1f883d',on:'#ffffff',hover:'#1c8139',accent:'#0969da',bar:'#f6f8fa',barText:'#1f2328'},
+ dark:{bg:'#0d1117',surface:'#151b23',text:'#f0f6fc',muted:'#9198a1',border:'#3d444d',input:'#3d444d',primary:'#238636',on:'#ffffff',hover:'#29903b',accent:'#4493f8',bar:'#010409',barText:'#f0f6fc'}},
+{id:'govuk',name:'GOV.UK Design System',org:'UK Government Digital Service',lic:'MIT',kind:'html',site:'https://design-system.service.gov.uk',repo:'https://github.com/alphagov/govuk-frontend',
+ font:'Arial,Helvetica,sans-serif',fontName:'GDS Transport on GOV.UK only, Arial elsewhere',r:[0,0,0],rBadge:0,ok:'#00703c',bad:'#d4351c',btn:{h:38,pad:'0 12px',w:400,shadow:'0 2px 0 #002d18'},focus:['#ffdd00',3,0],hw:700,
+ about:'Built from years of user research on public services. One question per page, heavy borders, big type and a yellow focus state that is hard to miss.',
+ best:'Forms, step-by-step services and accessibility-first work',lib:'GOV.UK Frontend',
+ warn:'This is a learning prototype. Do not use the GOV.UK name, crown or logo, or present it as a real government service.',
+ v:{input:'heavy',alert:'stripe',tabs:'underline',card:'border',sec:'grey'},
+ light:{bg:'#ffffff',surface:'#f3f2f1',text:'#0b0c0c',muted:'#505a5f',border:'#b1b4b6',input:'#0b0c0c',primary:'#00703c',on:'#ffffff',hover:'#005a30',accent:'#1d70b8',bar:'#1d70b8',barText:'#ffffff'},dark:null},
+{id:'nhs',name:'NHS Design System',org:'NHS England',lic:'MIT',kind:'html',site:'https://service-manual.nhs.uk/design-system',repo:'https://github.com/nhsuk/nhsuk-frontend',
+ font:'Arial,Helvetica,sans-serif',fontName:'Frutiger on NHS sites, Arial elsewhere',r:[4,4,4],rBadge:0,ok:'#007f3b',bad:'#d5281b',btn:{h:44,pad:'0 16px',w:600,shadow:'0 4px 0 #00401e'},focus:['#ffeb3b',4,0],hw:700,
+ about:'A health-service take on the GOV.UK approach. Plain language, large touch targets and white cards on a pale grey page.',
+ best:'Health, wellbeing and public information services',lib:'NHS.UK Frontend',
+ warn:'This is a learning prototype. Do not use the NHS logo or present it as a real NHS service.',
+ v:{input:'heavy',alert:'stripe',tabs:'underline',card:'border',sec:'grey'},
+ light:{bg:'#f0f4f5',surface:'#d8dde0',text:'#212b32',muted:'#4c6272',border:'#d8dde0',input:'#4c6272',primary:'#007f3b',on:'#ffffff',hover:'#00662f',accent:'#005eb8',bar:'#005eb8',barText:'#ffffff',card:'#ffffff'},dark:null},
+{id:'uswds',name:'U.S. Web Design System',org:'US General Services Administration',lic:'Public domain (CC0), parts MIT',kind:'html',site:'https://designsystem.digital.gov',repo:'https://github.com/uswds/uswds',
+ font:'"Source Sans 3",'+SYS,fontName:'Source Sans 3',r:[4,0,4],rBadge:2,ok:'#00a91c',bad:'#b50909',btn:{h:44,pad:'0 20px',w:700},focus:['#2491ff',4,0],hw:700,
+ about:'The US federal government system. Sturdy buttons, square inputs and a thick blue focus ring.',
+ best:'Public services and information-rich sites',lib:'USWDS',
+ v:{input:'outline',alert:'stripe',tabs:'underline',card:'border',sec:'accent'},
+ light:{bg:'#ffffff',surface:'#f0f0f0',text:'#1b1b1b',muted:'#565c65',border:'#a9aeb1',input:'#565c65',primary:'#005ea2',on:'#ffffff',hover:'#1a4480',accent:'#005ea2',bar:'#ffffff',barText:'#1b1b1b'},dark:null},
+{id:'ant',name:'Ant Design',org:'Ant Group',lic:'MIT',kind:'react',site:'https://ant.design',repo:'https://github.com/ant-design/ant-design',
+ font:SYS,fontName:'System font stack',r:[6,6,8],rBadge:4,ok:'#52c41a',bad:'#ff4d4f',btn:{h:32,pad:'0 15px',w:400},
+ about:'A very large React component set for admin and business software. Bright blue, compact controls, tables for everything.',
+ best:'Admin panels and business dashboards',lib:'Ant Design',
+ v:{input:'outline',alert:'tint',tabs:'underline',card:'border',sec:'outline'},
+ light:{bg:'#ffffff',surface:'#f5f5f5',text:'#1f1f1f',muted:'#595959',border:'#f0f0f0',input:'#d9d9d9',primary:'#1677ff',on:'#ffffff',hover:'#4096ff',accent:'#1677ff',bar:'#001529',barText:'#ffffff'},
+ dark:{bg:'#141414',surface:'#1f1f1f',text:'#dcdcdc',muted:'#a6a6a6',border:'#303030',input:'#424242',primary:'#1668dc',on:'#ffffff',hover:'#3c89e8',accent:'#3c89e8',bar:'#1f1f1f',barText:'#dcdcdc'}},
+{id:'shadcn',name:'shadcn/ui',org:'Community project',lic:'MIT',kind:'react',site:'https://ui.shadcn.com',repo:'https://github.com/shadcn-ui/ui',
+ font:'Geist,'+SYS,fontName:'Geist',r:[8,8,12],ok:'#16a34a',bad:'#dc2626',btn:{h:36,pad:'0 16px',w:500},
+ about:'Copy-and-own React components styled with Tailwind. Monochrome, thin borders and a modern startup feel. AI coding tools know it well.',
+ best:'Modern web apps and SaaS-style products',lib:'shadcn/ui',
+ v:{input:'outline',alert:'outline',tabs:'segmented',card:'border',sec:'grey'},
+ light:{bg:'#ffffff',surface:'#f4f4f5',text:'#09090b',muted:'#71717a',border:'#e4e4e7',input:'#e4e4e7',primary:'#18181b',on:'#fafafa',hover:'#2f2f33',accent:'#18181b',bar:'#ffffff',barText:'#09090b'},
+ dark:{bg:'#09090b',surface:'#27272a',text:'#fafafa',muted:'#a1a1aa',border:'#27272a',input:'#3f3f46',primary:'#fafafa',on:'#18181b',hover:'#e4e4e7',accent:'#fafafa',bar:'#09090b',barText:'#fafafa'}},
+{id:'radix',name:'Radix Themes',org:'WorkOS',lic:'MIT',kind:'react',site:'https://www.radix-ui.com/themes',repo:'https://github.com/radix-ui/themes',
+ font:SYS,fontName:'System font stack',r:[6,6,8],ok:'#30a46c',bad:'#e5484d',btn:{h:32,pad:'0 12px',w:500},
+ about:'A themed layer on the accessible Radix primitives. Twelve-step colour scales, soft tinted buttons and tidy spacing.',
+ best:'Polished web apps with strong keyboard support',lib:'Radix Themes',
+ v:{input:'outline',alert:'tint',tabs:'underline',card:'border',sec:'soft'},
+ light:{bg:'#ffffff',surface:'#f9f9f9',text:'#202020',muted:'#646464',border:'#e0e0e0',input:'#cecece',primary:'#3e63dd',on:'#ffffff',hover:'#3358d4',accent:'#3a5bc7',bar:'#ffffff',barText:'#202020'},
+ dark:{bg:'#111111',surface:'#191919',text:'#eeeeee',muted:'#b4b4b4',border:'#3a3a3a',input:'#606060',primary:'#3e63dd',on:'#ffffff',hover:'#5472e4',accent:'#9eb1ff',bar:'#111111',barText:'#eeeeee'}},
+{id:'bootstrap',name:'Bootstrap',org:'Bootstrap team',lic:'MIT',kind:'html',site:'https://getbootstrap.com',repo:'https://github.com/twbs/bootstrap',
+ font:SYS,fontName:'System font stack',r:[6,6,6],rBadge:6,ok:'#198754',bad:'#dc3545',btn:{h:38,pad:'0 12px',w:400},
+ about:'The most widely used front-end toolkit. One stylesheet and one script give you a full set of familiar components.',
+ best:'First prototypes and single-file builds',lib:'Bootstrap 5',
+ v:{input:'outline',alert:'tint',tabs:'underline',card:'border',sec:'outline'},
+ light:{bg:'#ffffff',surface:'#f8f9fa',text:'#212529',muted:'#6c757d',border:'#dee2e6',input:'#dee2e6',primary:'#0d6efd',on:'#ffffff',hover:'#0b5ed7',accent:'#0d6efd',bar:'#f8f9fa',barText:'#212529'},
+ dark:{bg:'#212529',surface:'#2b3035',text:'#dee2e6',muted:'#adb5bd',border:'#495057',input:'#495057',primary:'#0d6efd',on:'#ffffff',hover:'#0b5ed7',accent:'#6ea8fe',bar:'#2b3035',barText:'#dee2e6'}},
+{id:'mantine',name:'Mantine',org:'Community project',lic:'MIT',kind:'react',site:'https://mantine.dev',repo:'https://github.com/mantinedev/mantine',
+ font:SYS,fontName:'System font stack',r:[4,4,4],ok:'#40c057',bad:'#fa5252',btn:{h:36,pad:'0 18px',w:600},
+ about:'A broad React library with hooks, forms and charts included. Friendly blue defaults that are easy to re-theme.',
+ best:'Feature-rich React apps built quickly',lib:'Mantine',
+ v:{input:'outline',alert:'tint',tabs:'underline',card:'border',sec:'outline'},
+ light:{bg:'#ffffff',surface:'#f8f9fa',text:'#000000',muted:'#868e96',border:'#dee2e6',input:'#ced4da',primary:'#228be6',on:'#ffffff',hover:'#1c7ed6',accent:'#228be6',bar:'#ffffff',barText:'#000000'},
+ dark:{bg:'#242424',surface:'#2e2e2e',text:'#c9c9c9',muted:'#828282',border:'#424242',input:'#424242',primary:'#1971c2',on:'#ffffff',hover:'#1864ab',accent:'#4dabf7',bar:'#242424',barText:'#c9c9c9'}}
+];
+const D=[{"id":"adobe-spectrum","key":"Adobe Spectrum","name":"Adobe Spectrum","lic":"Apache 2.0","site":"https://spectrum.adobe.com","repo":"https://github.com/adobe/react-spectrum"},{"id":"auro-alaska-airlines","key":"Alaska Airlines","name":"Auro (Alaska Airlines)","lic":"Apache 2.0","site":"https://auro.alaskaair.com/","repo":"https://github.com/AlaskaAirlines"},{"id":"amplify-ui","key":"Amplify UI","name":"Amplify UI","lic":"Apache 2.0","site":"https://ui.docs.amplify.aws/","repo":"https://github.com/aws-amplify/amplify-ui"},{"id":"appear-here-styleguide","key":"Appear Here Styleguide","name":"Appear Here Styleguide","lic":"MIT","site":"https://bloom.appearhere.co.uk/","repo":"https://github.com/appearhere/bloom"},{"id":"arena-by-dravensoft","key":"Arena by Dravensoft","name":"Arena by Dravensoft","lic":"MIT","site":"https://arena.dravensoft.org","repo":"https://github.com/dravensoft-dev/arena"},{"id":"artsy-palette","key":"Artsy Palette","name":"Artsy Palette","lic":"MIT","site":"https://palette.artsy.net/","repo":"https://github.com/artsy/palette"},{"id":"at-uikit","key":"AT UIKIT","name":"AT UIKIT","lic":"MIT","site":"https://at-ui.github.io/at-ui/#/en","repo":"https://github.com/at-ui/at-ui"},{"id":"aurora-government-of-canada","key":"Aurora (Government of Canada)","name":"Aurora (Government of Canada)","lic":"MIT","site":"https://design.gccollab.ca/","repo":"https://github.com/gctools-outilsgc/design-system"},{"id":"autoguru-overdrive","key":"AutoGuru Overdrive","name":"AutoGuru Overdrive","lic":"MIT","site":"http://overdrive.autoguru.io/","repo":"https://github.com/autoguru-au/overdrive"},{"id":"cloudscape-aws","key":"AWS Cloudscape Design System","name":"Cloudscape (AWS)","lic":"Apache 2.0","site":"https://cloudscape.design/","repo":"https://github.com/cloudscape-design/components"},{"id":"backpack-skyscanner","key":"Backpack (Skyscanner)","name":"Backpack (Skyscanner)","lic":"Apache 2.0","site":"https://skyscanner.design/","repo":"https://github.com/skyscanner/backpack"},{"id":"basis-design-system","key":"Basis Design System","name":"Basis Design System","lic":"MIT","site":"https://basis.now.sh","repo":"https://github.com/moroshko/basis"},{"id":"bento-ds","key":"Bento DS","name":"Bento DS","lic":"MIT","site":"https://bento-ds.com","repo":"https://github.com/buildo/bento-design-system"},{"id":"blip","key":"BLiP","name":"BLiP","lic":"MIT","site":"https://takenet.github.io/blip-ds/","repo":"https://github.com/takenet/blip-ds"},{"id":"blueprint","key":"Blueprint","name":"Blueprint","lic":"Apache 2.0","site":"https://blueprintjs.com/","repo":"https://github.com/palantir/blueprint"},{"id":"bold-bridge-design-system","key":"Bold (Bridge Design System)","name":"Bold (Bridge Design System)","lic":"MIT","site":"https://bold.bridge.ufsc.tech/","repo":"https://github.com/laboratoriobridge/bold"},{"id":"braid-design-system","key":"Braid Design System","name":"Braid Design System","lic":"MIT","site":"https://seek-oss.github.io/braid-design-system/","repo":"https://github.com/seek-oss/braid-design-system"},{"id":"buildit-gravity","key":"Buildit Gravity","name":"Buildit Gravity","lic":"MIT","site":"http://style.buildit.digital/","repo":"https://github.com/buildit/gravity-ui-web"},{"id":"buzzfeed-solid","key":"BuzzFeed Solid","name":"BuzzFeed Solid","lic":"MIT","site":"https://solid.buzzfeed.com/","repo":"https://github.com/buzzfeed/solid"},{"id":"arco-design-bytedance","key":"ByteDance Arco Design","name":"Arco Design (ByteDance)","lic":"MIT","site":"https://arco.design/","repo":"https://github.com/arco-design/arco-design"},{"id":"mineral-ui","key":"CA Technologies Mineral UI","name":"Mineral UI","lic":"Apache 2.0","site":"https://mineral-ui.netlify.app/","repo":"https://github.com/mineral-ui/mineral-ui"},{"id":"cedar","key":"Cedar","name":"Cedar","lic":"MIT","site":"https://rei.github.io/rei-cedar-docs/","repo":"https://github.com/rei/rei-cedar"},{"id":"chakra-ui","key":"Chakra UI","name":"Chakra UI","lic":"MIT","site":"https://chakra-ui.com/","repo":"https://github.com/chakra-ui/chakra-ui"},{"id":"city-of-boston-fleet","key":"City of Boston Fleet","name":"City of Boston Fleet","lic":"CC0 (declared in package.json)","site":"https://patterns.boston.gov/","repo":"https://github.com/CityOfBoston/digital"},{"id":"cloudflare-kumo","key":"Cloudflare Kumo","name":"Cloudflare Kumo","lic":"MIT","site":"https://kumo-ui.com/","repo":"https://github.com/cloudflare/kumo"},{"id":"coinbase-design-system","key":"Coinbase Design System","name":"Coinbase Design System","lic":"Apache 2.0","site":"https://cds.coinbase.com/","repo":"https://github.com/coinbase/cds"},{"id":"contentful-forma-36","key":"Contentful Forma 36","name":"Contentful Forma 36","lic":"MIT","site":"https://f36.contentful.com/","repo":"https://github.com/contentful/forma-36"},{"id":"daisyui","key":"daisyUI","name":"daisyUI","lic":"MIT","site":"https://daisyui.com/","repo":"https://github.com/saadeghi/daisyui"},{"id":"decentraland-ui","key":"Decentraland UI","name":"Decentraland UI","lic":"Apache 2.0","site":"https://ui.decentraland.org/","repo":"https://github.com/decentraland/ui"},{"id":"dhis2-ui","key":"DHIS2 UI","name":"DHIS2 UI","lic":"BSD 3-Clause","site":"https://developers.dhis2.org/design-system/","repo":"https://github.com/dhis2/ui"},{"id":"ebay-skin","key":"eBay Skin","name":"eBay Skin","lic":"MIT","site":"https://opensource.ebay.com/evo-web/","repo":"https://github.com/eBay/evo-web"},{"id":"evergreen","key":"Evergreen","name":"Evergreen","lic":"MIT","site":"https://evergreen.surge.sh","repo":"https://github.com/segmentio/evergreen"},{"id":"flowbite","key":"Flowbite Design System","name":"Flowbite","lic":"MIT","site":"https://www.figma.com/community/file/1179442320711977498","repo":"https://github.com/themesberg/flowbite"},{"id":"grafana-ui","key":"Grafana UI","name":"Grafana UI","lic":"Apache 2.0 (UI package; the rest of Grafana is AGPL 3.0)","site":"https://developers.grafana.com/ui/latest/","repo":"https://github.com/grafana/grafana/tree/main/packages/grafana-ui"},{"id":"gympass-yoga","key":"Gympass Yoga","name":"Gympass Yoga","lic":"MIT","site":"https://gympass.github.io/yoga/","repo":"https://github.com/gympass/yoga"},{"id":"hashicorp-helios","key":"HashiCorp Helios","name":"HashiCorp Helios","lic":"MPL 2.0","site":"https://helios.hashicorp.design","repo":"https://github.com/hashicorp/design-system"},{"id":"haus","key":"haus","name":"haus","lic":"MIT","site":"https://haus.hipuku.dev","repo":"https://github.com/hipuku/haus"},{"id":"heroui","key":"HeroUI","name":"HeroUI","lic":"Apache 2.0","site":"https://heroui.com/","repo":"https://github.com/heroui-inc/heroui"},{"id":"grommet-hewlett-packard-enterprise","key":"Hewlett Packard grommet","name":"Grommet (Hewlett Packard Enterprise)","lic":"Apache 2.0","site":"https://grommet.github.io","repo":"https://github.com/grommet/grommet"},{"id":"italia-design-system","key":"Italia Design System","name":"Italia Design System","lic":"BSD 3-Clause","site":"https://designers.italia.it/design-system/","repo":"https://github.com/italia/bootstrap-italia"},{"id":"jetbrains-ring-ui","key":"JetBrains Ring UI","name":"JetBrains Ring UI","lic":"Apache 2.0","site":"https://jetbrains.github.io/ring-ui","repo":"https://github.com/JetBrains/ring-ui"},{"id":"just-eat-takeaway-com-pie-design-system","key":"Just Eat Takeaway.com PIE Design System","name":"Just Eat Takeaway.com PIE Design System","lic":"Apache 2.0","site":"https://pie.design/","repo":"https://github.com/justeattakeaway/pie"},{"id":"kaizen","key":"Kaizen","name":"Kaizen","lic":"MIT","site":"https://cultureamp.design/","repo":"https://github.com/cultureamp/kaizen-design-system"},{"id":"kolibri","key":"KoliBri","name":"KoliBri","lic":"EUPL","site":"https://public-ui.github.io/) (Public-UI","repo":"https://github.com/public-ui/kolibri"},{"id":"kolibri-design-system","key":"Kolibri Design System","name":"Kolibri Design System","lic":"MIT (declared in package.json)","site":"https://design-system.learningequality.org/","repo":"https://github.com/learningequality/kolibri-design-system"},{"id":"kontur","key":"Kontur","name":"Kontur","lic":"MIT","site":"https://guides.kontur.ru/","repo":"https://github.com/skbkontur/retail-ui"},{"id":"materialize-css","key":"Materialize CSS","name":"Materialize CSS","lic":"MIT","site":"https://materializecss.com/","repo":"https://github.com/Dogfalo/materialize"},{"id":"meta-astryx","key":"Meta Astryx","name":"Meta Astryx","lic":"MIT","site":"https://astryx.atmeta.com/","repo":"https://github.com/facebook/astryx"},{"id":"leafygreen-mongodb","key":"MongoDB Design System","name":"LeafyGreen (MongoDB)","lic":"Apache 2.0","site":"http://mongodb.design","repo":"https://github.com/mongodb/leafygreen-ui"},{"id":"mozilla-protocol","key":"Mozilla Protocol","name":"Mozilla Protocol","lic":"MPL 2.0","site":"https://protocol.mozilla.org/","repo":"https://github.com/mozilla/protocol"},{"id":"base-ui-mui","key":"MUI: Base UI","name":"Base UI (MUI)","lic":"MIT","site":"https://base-ui.com/","repo":"https://github.com/mui/base-ui"},{"id":"material-ui-mui","key":"MUI: Material UI","name":"Material UI (MUI)","lic":"MIT","site":"https://mui.com/material-ui/","repo":"https://github.com/mui/material-ui"},{"id":"nasa-web-design-system","key":"NASA Web Design System","name":"NASA Web Design System","lic":"CC0 (declared in package.json)","site":"https://nasa.github.io/nasawds-site/","repo":"https://github.com/nasa/nasawds"},{"id":"new-york-state-design-system","key":"New York State Design System","name":"New York State Design System","lic":"Apache 2.0","site":"https://designsystem.ny.gov/components/","repo":"https://github.com/ITS-HCD/nysds"},{"id":"nvidia-elements-design-system","key":"NVIDIA Elements Design System","name":"NVIDIA Elements Design System","lic":"Apache 2.0","site":"https://nvidia.github.io/elements/","repo":"https://github.com/NVIDIA/elements"},{"id":"okta-odyssey-design-system","key":"Okta Odyssey Design System","name":"Okta Odyssey Design System","lic":"Apache 2.0","site":"https://odyssey-storybook.okta.design/","repo":"https://github.com/okta/odyssey"},{"id":"ontario-design-system","key":"Ontario Design System","name":"Ontario Design System","lic":"Apache 2.0","site":"https://designsystem.ontario.ca/","repo":"https://github.com/ongov/ontario-design-system"},{"id":"persona-design-system","key":"Persona Design System","name":"Persona Design System","lic":"MIT","site":"https://privy-open-source.github.io/design-system/","repo":"https://github.com/privy-open-source/design-system"},{"id":"pharos-jstor-s-design-system","key":"Pharos: JSTOR's Design System","name":"Pharos: JSTOR's Design System","lic":"MIT","site":"https://pharos.jstor.org","repo":"https://github.com/ithaka/pharos"},{"id":"gestalt-pinterest","key":"Pinterest Gestalt","name":"Gestalt (Pinterest)","lic":"Apache 2.0","site":"https://pinterest.github.io/gestalt/#/","repo":"https://github.com/pinterest/gestalt"},{"id":"pivotal-ui","key":"Pivotal","name":"Pivotal UI","lic":"MIT","site":"https://pivotal-cf.github.io/pivotal-ui/","repo":"https://github.com/pivotal-cf/pivotal-ui"},{"id":"porsche-design-system","key":"Porsche Design System","name":"Porsche Design System","lic":"Apache 2.0","site":"https://designsystem.porsche.com","repo":"https://github.com/porsche-design-system/porsche-design-system"},{"id":"priceline-design-system","key":"Priceline Design System","name":"Priceline Design System","lic":"MIT","site":"https://priceline.github.io/design-system/","repo":"https://github.com/priceline/design-system"},{"id":"pusher-chameleon","key":"Pusher Chameleon","name":"Pusher Chameleon","lic":"MIT","site":"https://pusher.github.io/chameleon/","repo":"https://github.com/pusher/chameleon"},{"id":"rambler","key":"Rambler","name":"Rambler","lic":"MIT","site":"https://rambler-digital-solutions.github.io/rambler-ui/","repo":"https://github.com/rambler-digital-solutions/rambler-ui"},{"id":"patternfly-red-hat","key":"Red Hat PatternFly","name":"PatternFly (Red Hat)","lic":"MIT","site":"https://www.patternfly.org/","repo":"https://github.com/patternfly/patternfly-react"},{"id":"sage-by-kajabi","key":"Sage by Kajabi","name":"Sage by Kajabi","lic":"MIT","site":"https://sage.kajabi.com","repo":"https://github.com/Kajabi/sage-lib"},{"id":"sap-fundamental","key":"SAP Fundamental","name":"SAP Fundamental","lic":"Apache 2.0","site":"https://github.com/SAP/fundamental","repo":"https://github.com/SAP/fundamental"},{"id":"sap-openui","key":"SAP OpenUI","name":"SAP OpenUI","lic":"Apache 2.0","site":"https://github.com/SAP/openui5","repo":"https://github.com/SAP/openui5"},{"id":"sap-ui5-web-components","key":"SAP UI5 Web Components","name":"SAP UI5 Web Components","lic":"Apache 2.0","site":"https://ui5.github.io/webcomponents/","repo":"https://github.com/SAP/ui5-webcomponents"},{"id":"scania-digital-design-system","key":"Scania Digital Design System","name":"Scania Digital Design System","lic":"MIT","site":"https://tegel.scania.com","repo":"https://github.com/scania-digital-design-system/tegel"},{"id":"semi-design","key":"Semi Design","name":"Semi Design","lic":"MIT","site":"https://semi.design/en-US","repo":"https://github.com/DouyinFE/semi-design"},{"id":"semrush-intergalactic-design-system","key":"Semrush Intergalactic Design System","name":"Semrush Intergalactic Design System","lic":"MIT","site":"https://i.semrush.com/","repo":"https://github.com/semrush/intergalactic"},{"id":"shoelace","key":"Shoelace","name":"Shoelace","lic":"MIT","site":"https://shoelace.style","repo":"https://github.com/shoelace-style/shoelace"},{"id":"siemens-ix","key":"Siemens iX","name":"Siemens iX","lic":"MIT","site":"https://ix.siemens.io/","repo":"https://github.com/siemens/ix"},{"id":"singapore-government-design-system","key":"Singapore Government Design System","name":"Singapore Government Design System","lic":"MIT","site":"https://www.designsystem.tech.gov.sg/","repo":"https://github.com/govtechsg/sgds"},{"id":"stacks-stack-overflow","key":"Stacks – Stack Overflow","name":"Stacks – Stack Overflow","lic":"MIT","site":"https://stackoverflow.design/","repo":"https://github.com/StackExchange/Stacks"},{"id":"strapi-design-system","key":"Strapi Design System","name":"Strapi Design System","lic":"MIT","site":"https://design-system.strapi.io/","repo":"https://github.com/strapi/design-system"},{"id":"telefonica-mistica","key":"Telefónica Mística","name":"Telefónica Mística","lic":"MIT","site":"https://brandfactory.telefonica.com/mistica","repo":"https://github.com/Telefonica/mistica-web"},{"id":"tdesign-tencent","key":"Tencent TDesign","name":"TDesign (Tencent)","lic":"MIT","site":"https://tdesign.tencent.com/","repo":"https://github.com/Tencent/tdesign-react"},{"id":"twilio-paste","key":"Twilio Paste","name":"Twilio Paste","lic":"MIT","site":"https://paste.twilio.design/","repo":"https://github.com/twilio-labs/paste"},{"id":"base-web-uber","key":"Uber's Base Web","name":"Base Web (Uber)","lic":"MIT","site":"https://baseweb.design/","repo":"https://github.com/uber-web/baseui"},{"id":"ubuntu-vanilla-framework","key":"Ubuntu Vanilla framework","name":"Ubuntu Vanilla framework","lic":"LGPL","site":"https://vanillaframework.io/","repo":"https://github.com/canonical-web-and-design/vanilla-framework"},{"id":"uiverse","key":"Uiverse","name":"Uiverse","lic":"MIT","site":"https://uiverse.io","repo":"https://github.com/uiverse-io/galaxy"},{"id":"untitled-ui","key":"Untitled UI","name":"Untitled UI","lic":"MIT","site":"https://www.untitledui.com/react/","repo":"https://github.com/untitleduico/react"},{"id":"vibe-monday-com","key":"Vibe","name":"Vibe (monday.com)","lic":"MIT","site":"https://style.monday.com/","repo":"https://github.com/mondaycom/vibe"},{"id":"clarity-vmware","key":"VMware Clarity Design System","name":"Clarity (VMware)","lic":"MIT (fonts licensed separately)","site":"https://clarity.design/","repo":"https://github.com/vmware-clarity/ng-clarity"},{"id":"vtex-styleguide","key":"VTEX Styleguide","name":"VTEX Styleguide","lic":"GPL","site":"https://styleguide.vtex.com/","repo":"https://github.com/vtex/styleguide"},{"id":"vue-design-system","key":"Vue Design System","name":"Vue Design System","lic":"MIT","site":"https://vueds.com/","repo":"https://github.com/viljamis/vue-design-system"},{"id":"ray-wework","key":"Ray by WeWork","name":"Ray (WeWork)","lic":"Apache 2.0","site":"https://ray.wework.com","repo":"https://github.com/wework/ray"},{"id":"welcome-ui","key":"Welcome UI","name":"Welcome UI","lic":"MIT","site":"http://www.welcome-ui.com/","repo":"https://github.com/WTTJ/welcome-ui"},{"id":"workday-canvas","key":"Workday Canvas","name":"Workday Canvas","lic":"Apache 2.0","site":"https://design.workday.com/","repo":"https://github.com/Workday/canvas-kit"},{"id":"zendesk-garden","key":"Zendesk Garden","name":"Zendesk Garden","lic":"Apache 2.0","site":"https://garden.zendesk.com/","repo":"https://github.com/zendeskgarden/react-components"}];
+const L={
+'Adobe Spectrum':{p:'#0265dc',text:'#222222',font:'"Source Sans 3"',fontName:'Adobe Clean (licensed), Source Sans 3 as a stand-in',r:[999,4,4],btn:{h:32,pad:'0 16px',w:700},kind:'react',org:'Adobe',about:'Adobe\'s system for Creative Cloud apps. Pill buttons, quiet greys and one blue for actions.',best:'Creative and productivity tools'},
+'Chakra UI':{p:'#3182ce',text:'#1a202c',muted:'#4a5568',border:'#e2e8f0',r:[6,6,8],btn:{h:40,pad:'0 16px',w:600},kind:'react',org:'Chakra Systems',about:'A popular React library built on style props. Friendly, rounded and quick to theme.',best:'Fast React prototypes'},
+'daisyUI':{p:'#422ad5',r:[8,8,16],btn:{h:40,pad:'0 16px',w:600},kind:'html',org:'Pouya Saadeghi',about:'Component classes for Tailwind CSS with many ready-made themes. It can load from a CDN link.',best:'Single-file builds with Tailwind'},
+'MUI: Material UI':{p:'#1976d2',hover:'#1565c0',text:'#212121',muted:'#666666',font:'Roboto',fontName:'Roboto',r:[4,4,4],btn:{h:36,pad:'0 16px',w:500,upper:true},v:{card:'shadow'},kind:'react',org:'MUI',about:'The best-known React version of Google\'s Material Design 2. Uppercase buttons, paper cards and shadows.',best:'React apps with a familiar Google feel'},
+'Red Hat PatternFly':{p:'#0066cc',hover:'#004d99',text:'#151515',muted:'#4d4d4d',font:'"Red Hat Text"',fontName:'Red Hat Text',r:[999,6,16],btn:{h:37,pad:'0 24px',w:400},kind:'react',org:'Red Hat',about:'Red Hat\'s system for enterprise and admin consoles. Dense tables, clear status patterns and pill buttons.',best:'Admin consoles and enterprise tools'},
+'AWS Cloudscape Design System':{p:'#0972d3',hover:'#033160',text:'#000716',muted:'#5f6b7a',font:'"Open Sans"',fontName:'Open Sans',r:[20,8,16],btn:{h:32,pad:'0 20px',w:700},kind:'react',org:'Amazon Web Services',about:'The system behind the AWS console. Built for tables, forms and long configuration flows.',best:'Cloud consoles and configuration-heavy tools'},
+'Blueprint':{p:'#2d72d2',hover:'#215db0',text:'#1c2127',muted:'#5f6b7c',r:[4,4,4],btn:{h:30,pad:'0 10px',w:400},kind:'react',org:'Palantir',about:'Palantir\'s toolkit for dense, data-heavy desktop interfaces.',best:'Complex desktop-style web apps'},
+"Uber's Base Web":{p:'#000000',hover:'#333333',surface:'#eeeeee',r:[8,8,8],btn:{h:48,pad:'0 16px',w:500},v:{input:'filled',sec:'grey'},kind:'react',org:'Uber',about:'Uber\'s React system. Black and white, large touch targets and filled grey inputs.',best:'Mobile-first consumer apps'},
+'Shoelace':{p:'#0284c7',hover:'#0369a1',text:'#27272a',muted:'#52525b',border:'#e4e4e7',input:'#d4d4d8',r:[4,4,4],btn:{h:40,pad:'0 16px',w:600},kind:'wc',org:'A Beautiful Site',about:'Framework-free web components that load from a CDN.',best:'Single-file builds that need real components'},
+'Flowbite Design System':{p:'#1a56db',hover:'#1e429f',text:'#111827',muted:'#6b7280',border:'#e5e7eb',input:'#d1d5db',surface:'#f9fafb',font:'Inter',fontName:'Inter',r:[8,8,8],btn:{h:40,pad:'0 20px',w:500},kind:'html',org:'Bergside',about:'Tailwind CSS components with a small script for interactivity. It can load from CDN links.',best:'Single-file builds with Tailwind'},
+'Hewlett Packard grommet':{p:'#7d4cdb',text:'#444444',muted:'#666666',r:[18,4,8],btn:{h:36,pad:'0 22px',w:700},v:{sec:'accent'},kind:'react',org:'Hewlett Packard Enterprise',about:'A React framework with accessibility and responsive layout built in. Bold purple and rounded buttons.',best:'Responsive React apps'},
+'Twilio Paste':{p:'#0263e0',text:'#121c2d',muted:'#606b85',border:'#e1e3ea',input:'#8891aa',font:'Inter',fontName:'Inter',r:[4,4,8],btn:{h:36,pad:'0 12px',w:600},kind:'react',org:'Twilio',about:'Twilio\'s system for customer-facing products, with strong accessibility guidance.',best:'Accessible business web apps'},
+'Pinterest Gestalt':{p:'#e60023',hover:'#b60000',accent:'#111111',text:'#111111',muted:'#5f5f5f',surface:'#efefef',r:[999,16,16],btn:{h:48,pad:'0 16px',w:600},v:{sec:'grey'},kind:'react',org:'Pinterest',about:'Pinterest\'s React system. Red primary action, very round shapes and large controls.',best:'Visual, image-led consumer apps'},
+'Semi Design':{p:'#0064fa',text:'#1c1f23',muted:'#6b7075',surface:'#f1f2f3',r:[3,3,6],btn:{h:32,pad:'0 12px',w:600},v:{input:'filled',sec:'soft'},kind:'react',org:'Douyin (ByteDance)',about:'The React system behind Douyin\'s internal tools. Compact, with filled grey inputs.',best:'Admin and content tools'},
+'ByteDance Arco Design':{p:'#165dff',text:'#1d2129',muted:'#4e5969',surface:'#f2f3f5',r:[2,2,4],btn:{h:32,pad:'0 15px',w:400},v:{input:'filled',sec:'grey'},kind:'react',org:'ByteDance',about:'An enterprise system for React and Vue. Sharp corners, bright blue and filled inputs.',best:'Enterprise dashboards'},
+'Tencent TDesign':{p:'#0052d9',text:'#181818',muted:'#5e5e5e',r:[3,3,6],btn:{h:32,pad:'0 16px',w:400},kind:'react',org:'Tencent',about:'Tencent\'s enterprise system, available for React, Vue and mini programs.',best:'Enterprise dashboards and mobile web'},
+'Porsche Design System':{p:'#010205',hover:'#333333',text:'#010205',muted:'#535457',border:'#d8d8db',input:'#6b6d70',font:'Arial',fontName:'Porsche Next (licensed), Arial as a stand-in',r:[4,4,8],btn:{h:54,pad:'0 26px',w:400},kind:'wc',org:'Porsche',about:'Web components in Porsche\'s brand style. Black primary buttons, generous spacing and large type.',best:'Studying a premium brand system',warn:'This is a learning prototype. Do not use the Porsche name, logo or fonts.'},
+'Materialize CSS':{p:'#26a69a',hover:'#2bbbad',accent:'#039be5',font:'Roboto',fontName:'Roboto',r:[2,2,2],btn:{h:36,pad:'0 16px',w:400,upper:true},v:{input:'line',card:'shadow'},kind:'html',org:'Materialize',about:'A classic CSS framework based on Material Design 2. Underlined inputs, uppercase buttons and shadowed cards.',best:'Simple single-file builds'},
+'Workday Canvas':{p:'#0875e1',hover:'#0061bd',text:'#333333',muted:'#5e6a75',font:'Roboto',fontName:'Roboto',r:[999,4,8],btn:{h:40,pad:'0 24px',w:500},kind:'react',org:'Workday',about:'Workday\'s system for HR and finance software. Pill buttons and a clear blue.',best:'Workplace and form-heavy apps'},
+'Backpack (Skyscanner)':{p:'#05203c',hover:'#154679',accent:'#0062e3',text:'#161616',muted:'#626971',r:[8,8,12],btn:{h:36,pad:'0 16px',w:700},kind:'react',org:'Skyscanner',about:'Skyscanner\'s system for travel search across web and native apps.',best:'Travel, search and booking flows'},
+'SAP UI5 Web Components':{p:'#0070f2',hover:'#0064d9',text:'#1d2d3e',muted:'#556b82',font:'Arial',fontName:'72 (Arial as a stand-in)',r:[8,4,12],btn:{h:36,pad:'0 10px',w:600},kind:'wc',org:'SAP',about:'SAP\'s Fiori design as framework-free web components.',best:'Enterprise business apps'},
+'HeroUI':{p:'#006fee',text:'#11181c',muted:'#71717a',surface:'#f4f4f5',font:'Inter',fontName:'Inter',r:[12,12,14],btn:{h:40,pad:'0 16px',w:400},v:{input:'filled',sec:'soft'},kind:'react',org:'HeroUI (formerly NextUI)',about:'A modern React library on Tailwind CSS. Soft, rounded and polished out of the box.',best:'Modern consumer web apps'},
+'MongoDB Design System':{p:'#00684a',hover:'#00593f',accent:'#016bf8',text:'#001e2b',muted:'#5c6c75',border:'#e8edeb',input:'#889397',r:[6,6,12],btn:{h:36,pad:'0 12px',w:500},kind:'react',org:'MongoDB',about:'MongoDB\'s React system. Deep green actions on calm, slightly cool greys.',best:'Developer and data tools'},
+'Evergreen':{p:'#3366ff',hover:'#2952cc',text:'#101840',muted:'#696f8c',border:'#d8dae5',r:[4,4,4],btn:{h:32,pad:'0 16px',w:500},kind:'react',org:'Segment',about:'Segment\'s React system for business software. Compact and understated.',best:'B2B web apps'},
+'Strapi Design System':{p:'#4945ff',hover:'#271fe0',text:'#32324d',muted:'#666687',border:'#dcdce4',r:[4,4,4],btn:{h:36,pad:'0 16px',w:600},kind:'react',org:'Strapi',about:'The React system behind the Strapi admin panel. Indigo actions and soft purple-greys.',best:'Content management tools'},
+'Contentful Forma 36':{p:'#0059c8',hover:'#0041ab',text:'#111b2b',muted:'#5a657c',r:[6,6,6],btn:{h:40,pad:'0 16px',w:500},kind:'react',org:'Contentful',about:'Contentful\'s React system for its web app and extensions.',best:'Content and editorial tools'},
+'Untitled UI':{p:'#7f56d9',hover:'#6941c6',text:'#181d27',muted:'#535862',border:'#e9eaeb',input:'#d5d7da',font:'Inter',fontName:'Inter',r:[8,8,12],btn:{h:40,pad:'0 14px',w:600},kind:'react',org:'Untitled UI',about:'A large React and Tailwind component set in a clean, modern SaaS style.',best:'SaaS dashboards and marketing pages'},
+'Coinbase Design System':{p:'#0052ff',text:'#0a0b0d',muted:'#5b616e',r:[999,8,16],btn:{h:40,pad:'0 24px',w:600},v:{sec:'grey'},kind:'react',org:'Coinbase',about:'Coinbase\'s system for web and mobile. Bright blue, pill buttons and plenty of white space.',best:'Finance and consumer apps'},
+'Zendesk Garden':{p:'#1f73b7',hover:'#144a75',text:'#2f3941',muted:'#68737d',border:'#d8dcde',input:'#d8dcde',r:[4,4,4],btn:{h:40,pad:'0 20px',w:400},v:{sec:'accent'},kind:'react',org:'Zendesk',about:'Zendesk\'s React system for support software. Calm blue and plain, readable forms.',best:'Support and service tools'}
+};
+const WIRE={bg:'#ffffff',surface:'#f2f2f2',text:'#222222',muted:'#666666',border:'#cccccc',input:'#888888',primary:'#444444',on:'#ffffff',hover:'#222222',accent:'#444444',bar:'#f2f2f2',barText:'#222222'};
+function shade(h){return '#'+[1,3,5].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*.82).toString(16).padStart(2,'0')).join('')}
+function lite(d,o){const t=o.text||'#1a1a1a';return Object.assign({},d,{preview:true,lite:true,org:o.org,kind:o.kind,font:(o.font?o.font+',':'')+SYS,fontName:o.fontName||'System font stack',r:o.r,ok:'#1a7f37',bad:'#c62828',btn:o.btn,about:o.about,best:o.best,lib:d.name,warn:o.warn,
+ v:Object.assign({input:'outline',alert:'tint',tabs:'underline',card:'border',sec:'outline'},o.v),
+ light:{bg:'#ffffff',surface:o.surface||'#f5f5f5',text:t,muted:o.muted||'#5f6368',border:o.border||'#e0e0e0',input:o.input||'#b8b8b8',primary:o.p,on:'#ffffff',hover:o.hover||shade(o.p),accent:o.accent||o.p,bar:'#ffffff',barText:t},dark:null})}
+S.forEach(s=>{s.preview=true});
+D.forEach(d=>{const o=L[d.key];S.push(o?lite(d,o):Object.assign({},d,{preview:false,font:SYS,r:[4,4,4],ok:'#1a7f37',bad:'#c62828',btn:{h:40,pad:'0 16px',w:600},lib:d.name,v:{input:'outline',alert:'outline',tabs:'underline',card:'border',sec:'outline'},light:WIRE,dark:null,about:'An open source design system. Its licence was read from the source repository.'}))});
+const rank=s=>!s.preview?2:s.lite?1:0;
+S.sort((a,b)=>rank(a)-rank(b)||(rank(a)?a.name.localeCompare(b.name):0));
+const TASKS={
+ today:['Today',[['Usability test write-up','UX Design','Due today',60],['Read chapter 4','Research Methods','Done',100]]],
+ week:['This week',[['Usability test write-up','UX Design','Due today',60],['Wireframe review','UX Design','Thursday',20],['Use case diagram','Systems Analysis','Friday',0]]],
+ modules:['Modules',[['UX Design','2 tasks open','45%',45],['Systems Analysis','1 task open','10%',10],['Research Methods','All tasks done','100%',100]]]
+};
+const $=id=>document.getElementById(id);
+const frame=$('frame');
+let cur=S[0],mode='light',filter='all',show='prompt';
+
+function lum(h){const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2]}
+function ratio(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+function theme(){return (mode==='dark'&&cur.dark)?cur.dark:cur.light}
+function rad(n){return n>=999?'999px (pill)':n+'px'}
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+function tokenPairs(){const t=theme();if(cur.lite)return [['Text',t.text],['Primary',t.primary],['On primary',t.on],['Link and accent',t.accent]];return [['Background',t.bg],['Surface',t.surface],['Text',t.text],['Muted text',t.muted],['Border',t.border],['Primary',t.primary],['On primary',t.on],['Link and accent',t.accent],['Success',cur.ok],['Error',cur.bad]]}
+
+function cssVars(){if(!cur.preview)return '/* No tokens are stored for '+cur.name+'.\n   Copy them from '+cur.site+' */';const n={'Background':'bg','Surface':'surface','Text':'text','Muted text':'muted','Border':'border','Primary':'primary','On primary':'on-primary','Link and accent':'accent','Success':'success','Error':'error'};
+ return '/* '+cur.name+', '+(theme()===cur.dark?'dark':'light')+' theme (approximate) */\n:root {\n'+tokenPairs().map(p=>'  --color-'+n[p[0]]+': '+p[1]+';').join('\n')+
+ '\n  --font-body: '+cur.font+';\n  --radius-button: '+(cur.r[0]>=999?'999px':cur.r[0]+'px')+';\n  --radius-input: '+cur.r[1]+'px;\n  --radius-card: '+cur.r[2]+'px;\n  --button-height: '+cur.btn.h+'px;\n}'}
+
+function prompt(){const t=theme(),idea=$('idea').value.trim()||'[describe your app here]';
+ const head='Build a clickable prototype as one self-contained HTML file, with the CSS and JavaScript inside the same file and no build step.\n\nWhat it is: '+idea+'\n\nDesign system: '+cur.name+' ('+cur.site+'). Follow its visual style, component patterns and accessibility guidance.\n';
+ const rules='\n\nRules:\n- Define the tokens once as CSS variables and reuse them everywhere.\n- Meet WCAG 2.2 AA: readable contrast, a visible keyboard focus state and a label on every form field.\n- Design for a phone-width screen first, then let it widen.\n- Use realistic sample content so I can run a user test with it.\n- Make every button and link do something, even if the data is fake.';
+ if(!cur.preview)return head+'Its source code is at '+cur.repo+'.\nRecreate its look with plain HTML and CSS from what you know about it. If you are not sure of its colours, fonts or corner shapes, ask me to paste them from its docs before you start.'+rules;
+ const how=cur.kind==='html'?'Use the real '+cur.lib+' library loaded from a CDN link if you can. If it will not load, recreate its look with plain CSS using the tokens below.'
+  :cur.kind==='wc'?'If you can, load '+cur.lib+' from a CDN. Otherwise recreate its look with plain HTML and CSS using the tokens below.'
+  :'The real '+cur.lib+' library needs React, so recreate its look with plain HTML and CSS using the tokens below.';
+ return head+how+'\n'+(cur.warn?cur.warn+'\n':'')+
+ '\nDesign tokens ('+(t===cur.dark?'dark':'light')+' theme):\n'+tokenPairs().map(p=>'- '+p[0]+': '+p[1]).join('\n')+
+ (cur.lite?'\n- Backgrounds and borders: neutral greys that suit this system':'')+
+ '\n- Font: '+cur.fontName+'\n- Corner radius: buttons '+rad(cur.r[0])+', inputs '+rad(cur.r[1])+', cards '+rad(cur.r[2])+
+ '\n- Button height: '+cur.btn.h+'px'+rules}
+
+function renderOut(){$('out').textContent=show==='prompt'?prompt():cssVars()}
+
+function apply(){
+ const s=cur,t=theme(),st=frame.style,set=(k,v)=>st.setProperty('--p-'+k,v);
+ const pv=frame.firstElementChild;
+ set('font',s.font);
+ ['bg','surface','text','muted','border','input','primary','on','hover','accent'].forEach(k=>set(k,t[k]));
+ set('bar',t.bar);set('bar-text',t.barText);set('ok',s.ok);set('bad',s.bad);
+ set('r-btn',s.r[0]+'px');set('r-input',s.r[1]+'px');set('r-card',s.r[2]+'px');set('r-badge',(s.rBadge!=null?s.rBadge:999)+'px');
+ set('btn-h',s.btn.h+'px');set('btn-pad',s.btn.pad);set('btn-w',s.btn.w);set('btn-shadow',s.btn.shadow||'none');set('btn-case',s.btn.upper?'uppercase':'none');
+ set('h-weight',s.hw||600);
+ const f=s.focus||[t.accent,2,2];set('focus',f[0]);set('focus-w',f[1]+'px');set('focus-off',f[2]+'px');
+ const sec={outline:['transparent',t.input,t.text],accent:['transparent',t.accent,t.accent],soft:['color-mix(in srgb,'+t.accent+' 14%,'+t.bg+')','transparent',t.accent],grey:[t.surface,t.border,t.text]}[s.v.sec];
+ set('sec-bg',sec[0]);set('sec-line',sec[1]);set('sec-text',sec[2]);
+ const card={fill:[t.surface,'transparent','none'],border:[t.card||t.bg,t.border,'none'],shadow:[t.card||t.bg,'transparent','0 1px 4px rgba(0,0,0,.22)']}[s.v.card];
+ set('card-bg',card[0]);set('card-line',card[1]);set('card-shadow',card[2]);
+ pv.dataset.input=s.v.input;pv.dataset.alert=s.v.alert;pv.dataset.tabs=s.v.tabs;
+
+ $('name').textContent=s.name;$('about').textContent=s.about;$('site').href=s.site;$('repo').href=s.repo;
+ const facts=$('facts');facts.textContent='';
+ [['Made by',s.org],['Licence',s.lic],['Built with',s.kind&&KIND[s.kind]],['Good for',s.best],['Font',s.preview&&s.fontName],['Corners',s.preview&&('Buttons '+rad(s.r[0])+', inputs '+rad(s.r[1])+', cards '+rad(s.r[2]))]].filter(p=>p[1])
+  .forEach(p=>{const d=el('div');d.append(el('dt','',p[0]),el('dd','',p[1]));facts.append(d)});
+
+ const tk=$('tokens');tk.textContent='';
+ tokenPairs().forEach(p=>{const b=el('button','tok');b.type='button';b.setAttribute('aria-label','Copy '+p[0]+' '+p[1]);const i=el('i');i.style.background=p[1];const sp=el('span');sp.append(el('small','',p[0]),el('span','mono',p[1]));b.append(i,sp);b.onclick=()=>copy(p[1],p[0]+' '+p[1]+' copied');tk.append(b)});
+
+ const cr=$('contrast');cr.textContent='';
+ [['Button label on primary',t.on,t.primary],['Body text on background',t.text,t.bg],['Muted text on background',t.muted,t.bg],['Link on background',t.accent,t.bg]].filter(p=>!(s.lite&&p[0][0]==='M')).forEach(p=>{
+  const r=ratio(p[1],p[2]),li=el('li'),right=el('span','row');
+  right.append(el('span','n',r.toFixed(1)+':1'),el('span','pill '+(r>=4.5?'ok':r>=3?'mid':'no'),r>=4.5?'Passes AA':r>=3?'Large text only':'Fails AA'));
+  li.append(el('span','',p[0]),right);cr.append(li)});
+
+ const noDark=!s.dark;$('mDark').disabled=noDark;$('darkNote').hidden=!noDark||!s.preview;$('darkNote').textContent=s.lite?'A dark preview is not set up for this system, so only light is shown.':'This system has no official dark theme, so only light is shown.';
+ $('liteNote').hidden=!s.lite;$('wireNote').hidden=s.preview;$('tokPanel').hidden=!s.preview;
+ $('mLight').setAttribute('aria-pressed',String(mode==='light'||noDark));$('mDark').setAttribute('aria-pressed',String(mode==='dark'&&!noDark));
+ document.querySelectorAll('.sys').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===s.id)));
+ renderOut();
+}
+
+function renderList(){const l=$('list'),q=$('q').value.trim().toLowerCase();l.textContent='';
+ const m=S.filter(s=>(filter==='all'||(filter==='preview'?s.preview:s.kind===filter))&&(!q||(s.name+' '+s.lic+' '+(s.org||'')).toLowerCase().includes(q)));
+ m.forEach(s=>{const b=el('button','sys');b.type='button';b.dataset.id=s.id;
+  const top=el('span','row spread');top.append(el('b','',s.name));if(s.kind)top.append(el('span','kind',KIND[s.kind]));
+  b.append(top,el('small','',(s.org?s.org+' · ':'')+s.lic));
+  if(s.preview){const dots=el('span','dots');[s.light.primary,s.light.accent,s.light.surface,s.light.text].forEach(c=>{const i=el('i');i.style.background=c;dots.append(i)});b.append(dots)}
+  b.onclick=()=>select(s.id,true);l.append(b)});
+ $('shown').textContent=m.length?m.length+' of '+S.length+' shown':'Nothing matches. Clear the search or choose All.';
+ document.querySelectorAll('.sys').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===cur.id)));}
+
+function renderFilters(){const f=$('filters');[['all','All'],['preview','With preview'],['html','Plain HTML'],['wc','Web components'],['react','React']].forEach(p=>{const b=el('button','chip',p[1]);b.type='button';b.setAttribute('aria-pressed',String(p[0]===filter));
+ b.onclick=()=>{filter=p[0];f.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',String(c===b)));renderList()};f.append(b)})}
+
+function select(id,setHash){const s=S.find(x=>x.id===id);if(!s)return;cur=s;apply();if(setHash){try{location.hash=id}catch(e){}}}
+
+function renderTasks(key){const d=TASKS[key];$('pvListTitle').textContent=d[0];const l=$('pvList');l.textContent='';
+ d[1].forEach(t=>{const c=el('div','pv-card'),top=el('div','pv-card-top'),left=el('div');left.append(el('b','',t[0]),el('div','pv-muted',t[1]));top.append(left,el('span','pv-badge',t[2]));
+  const bar=el('div','pv-bar2'),fill=el('i');fill.style.width=t[3]+'%';bar.append(fill);bar.setAttribute('role','img');bar.setAttribute('aria-label',t[3]+'% complete');c.append(top,bar);l.append(c)})}
+
+let timer;
+function say(msg){const s=$('status');s.textContent=msg;clearTimeout(timer);timer=setTimeout(()=>{s.textContent=''},2500)}
+function copy(text,msg){const fail=()=>say('Copying is blocked here. Select the text and copy it yourself.');
+ try{navigator.clipboard.writeText(text).then(()=>say(msg),fail)}catch(e){fail()}}
+
+document.querySelectorAll('.pv-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.pv-tab').forEach(x=>x.setAttribute('aria-selected',String(x===t)));renderTasks(t.dataset.tab)});
+$('mLight').onclick=()=>{mode='light';apply()};
+$('mDark').onclick=()=>{mode='dark';apply()};
+function width(phone){frame.classList.toggle('phone',phone);$('wPhone').setAttribute('aria-pressed',String(phone));$('wWide').setAttribute('aria-pressed',String(!phone))}
+$('wPhone').onclick=()=>width(true);$('wWide').onclick=()=>width(false);
+function output(k){show=k;$('oPrompt').setAttribute('aria-pressed',String(k==='prompt'));$('oCss').setAttribute('aria-pressed',String(k==='css'));renderOut()}
+$('oPrompt').onclick=()=>output('prompt');$('oCss').onclick=()=>output('css');
+$('idea').oninput=renderOut;$('q').oninput=renderList;
+$('copy').onclick=()=>copy($('out').textContent,show==='prompt'?'Prompt copied':'CSS variables copied');
+window.addEventListener('hashchange',()=>select(location.hash.slice(1),false));
+
+$('count').textContent=S.length;$('pcount').textContent=S.filter(s=>s.preview).length;
+renderFilters();renderList();renderTasks('today');
+select(S.some(s=>s.id===location.hash.slice(1))?location.hash.slice(1):S[0].id,false);
+</script>
+</body>
+</html>
